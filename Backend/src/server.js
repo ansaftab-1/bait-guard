@@ -40,7 +40,14 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'BaitGuard Backend Engine', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'BaitGuard Backend Engine',
+    version: '1.0.0',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Mount modular API routers
