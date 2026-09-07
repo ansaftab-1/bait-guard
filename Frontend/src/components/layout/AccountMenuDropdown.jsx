@@ -54,24 +54,8 @@ export default function AccountMenuDropdown({ onClose }) {
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-20 left-3 w-68 bg-[#18181b]/85 backdrop-blur-xl text-white rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-zinc-700/60 z-50 font-sans transform transition-all duration-200 ease-out"
-      style={{
-        animation: 'smoothPopupFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-      }}
+      className="absolute bottom-20 left-3 w-68 bg-[#18181b]/85 backdrop-blur-xl text-white rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-zinc-700/60 z-50 font-sans transform transition-all duration-200 ease-out animate-smooth-popup"
     >
-      {/* Inline Keyframes style for ultra-smooth entry animation */}
-      <style>{`
-        @keyframes smoothPopupFade {
-          0% {
-            opacity: 0;
-            transform: translateY(10px) scale(0.95);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `}</style>
 
       {/* ─── Profile Header ─── */}
       <div className="mb-3">
