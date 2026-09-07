@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import PageHeader from '../components/map/PageHeader';
 import FilterBar from '../components/map/FilterBar';
 import FacilityMapCanvas from '../components/map/FacilityMapCanvas';
@@ -14,6 +14,35 @@ export default function FacilityMapPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
 
+  // Filter stations based on criteria (memoized to avoid re-filtering on station selection)
+  const filteredStations = useMemo(() => {
+    if (!data?.stations) return [];
+    return data.stations.filter(station => {
+      if (activeZone !== 'All' && station.zone !== activeZone) return false;
+      
+      if (activeStatus !== 'All') {
+        const statusMap = {
+          'Active': 'active',
+          'Alert': 'alert',
+          'Low Bait': 'lowBait',
+          'Offline': 'offline'
+        };
+        if (station.status !== statusMap[activeStatus]) return false;
+      }
+      
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase();
+        if (
+          !station.id.toLowerCase().includes(q) &&
+          !station.code.toLowerCase().includes(q) &&
+          !station.location.toLowerCase().includes(q)
+        ) return false;
+      }
+      
+      return true;
+    });
+  }, [data?.stations, activeZone, activeStatus, searchQuery]);
+
   if (isLoading || !data) {
     return (
       <div className="p-6 animate-pulse space-y-6">
@@ -23,32 +52,6 @@ export default function FacilityMapPage() {
       </div>
     );
   }
-
-  // Filter stations based on criteria
-  const filteredStations = data.stations.filter(station => {
-    if (activeZone !== 'All' && station.zone !== activeZone) return false;
-    
-    if (activeStatus !== 'All') {
-      const statusMap = {
-        'Active': 'active',
-        'Alert': 'alert',
-        'Low Bait': 'lowBait',
-        'Offline': 'offline'
-      };
-      if (station.status !== statusMap[activeStatus]) return false;
-    }
-    
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      if (
-        !station.id.toLowerCase().includes(q) &&
-        !station.code.toLowerCase().includes(q) &&
-        !station.location.toLowerCase().includes(q)
-      ) return false;
-    }
-    
-    return true;
-  });
 
   return (
     <div className="flex flex-col h-full p-6">

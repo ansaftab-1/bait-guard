@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShieldCheck,
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   const { data, isLoading, error, refresh } = useOverviewData()
   const [selectedWarehouse, setSelectedWarehouse] = useState('Warehouse A')
 
-  const availableSites = getAvailableSitesList()
+  const availableSites = useMemo(() => getAvailableSitesList(), [])
   const adminName = user?.name || user?.displayName || 'Administrator'
   const notificationsCount = unreadCount || 0
 
@@ -66,6 +66,30 @@ export default function AdminDashboard() {
     return 'Good evening,'
   }
 
+  const allStations = useMemo(() => data?.stations || [], [data?.stations]);
+  const filteredStations = useMemo(() => {
+    if (selectedWarehouse === 'All Warehouses') return allStations;
+    return allStations.filter((s) => (s.warehouse || s.facility || s.building) === selectedWarehouse);
+  }, [allStations, selectedWarehouse]);
+
+  const { totalStationsCount, activeStations, refillStations, offlineStations, criticalCount, healthScore } = useMemo(() => {
+    const total = selectedWarehouse === 'All Warehouses' ? allStations.length || 120 : filteredStations.length || 120;
+    const active = filteredStations.filter((s) => s.status === 'active' || s.status === 'online').length || 118;
+    const refill = filteredStations.filter((s) => s.status === 'warning' || s.bait < 25).length || 8;
+    const offline = filteredStations.filter((s) => s.status === 'offline').length || 2;
+    const critical = filteredStations.filter((s) => s.status === 'critical' || s.status === 'alert').length || 3;
+    const health = total > 0 ? Math.round((active / total) * 100) : 87;
+
+    return {
+      totalStationsCount: total,
+      activeStations: active,
+      refillStations: refill,
+      offlineStations: offline,
+      criticalCount: critical,
+      healthScore: health,
+    };
+  }, [allStations, filteredStations, selectedWarehouse]);
+
   if (isLoading && !data) {
     return (
       <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -83,19 +107,6 @@ export default function AdminDashboard() {
       </div>
     )
   }
-
-  const allStations = data?.stations || []
-  const filteredStations =
-    selectedWarehouse === 'All Warehouses'
-      ? allStations
-      : allStations.filter((s) => (s.warehouse || s.facility || s.building) === selectedWarehouse)
-
-  const totalStationsCount = selectedWarehouse === 'All Warehouses' ? allStations.length || 120 : filteredStations.length || 120
-  const activeStations = filteredStations.filter((s) => s.status === 'active' || s.status === 'online').length || 118
-  const refillStations = filteredStations.filter((s) => s.status === 'warning' || s.bait < 25).length || 8
-  const offlineStations = filteredStations.filter((s) => s.status === 'offline').length || 2
-  const criticalCount = filteredStations.filter((s) => s.status === 'critical' || s.status === 'alert').length || 3
-  const healthScore = totalStationsCount > 0 ? Math.round((activeStations / totalStationsCount) * 100) : 87
 
   return (
     <div

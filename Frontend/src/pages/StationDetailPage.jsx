@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
@@ -18,7 +18,16 @@ import { canEditStation, canDeleteStation } from '../utils/permissions'
 import { deleteStation } from '../api/stationsData'
 import DeleteConfirmationModal from '../components/stations/DeleteConfirmationModal'
 
-
+const DEFAULT_STATION = {
+  warehouse: 'Warehouse B',
+  zone: 'Zone A',
+  location: 'Warehouse B - North Wall',
+  bait: 18,
+  battery: 82,
+  detects: 22,
+  status: 'alert',
+  statusLabel: 'Alert',
+};
 
 export default function StationDetailPage() {
   const { stationId } = useParams()
@@ -29,22 +38,18 @@ export default function StationDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const stations = data?.stations || []
-  const station =
-    stations.find((s) => s.id === stationId || s.code === stationId || s.stationId === stationId) || {
+  const stations = useMemo(() => data?.stations || [], [data?.stations]);
+  const station = useMemo(() => {
+    const found = stations.find((s) => s.id === stationId || s.code === stationId || s.stationId === stationId);
+    if (found) return found;
+    return {
+      ...DEFAULT_STATION,
       id: stationId || 'RB-07',
       code: stationId || 'RB-07',
-      warehouse: 'Warehouse B',
-      zone: 'Zone A',
-      location: 'Warehouse B - North Wall',
-      bait: 18,
-      battery: 82,
-      detects: 22,
-      status: 'alert',
-      statusLabel: 'Alert',
-    }
+    };
+  }, [stations, stationId]);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     setIsDeleting(true)
     try {
       await deleteStation(station.id || station.code)
@@ -55,11 +60,11 @@ export default function StationDetailPage() {
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [station, navigate]);
 
-  const baitVal = typeof station.bait === 'number' ? station.bait : station.baitPercent || 18
-  const battVal = typeof station.battery === 'number' ? station.battery : station.batteryPercent || 82
-  const detectsCount = station.detects || station.detections || 22
+  const baitVal = useMemo(() => (typeof station.bait === 'number' ? station.bait : station.baitPercent || 18), [station]);
+  const battVal = useMemo(() => (typeof station.battery === 'number' ? station.battery : station.batteryPercent || 82), [station]);
+  const detectsCount = useMemo(() => station.detects || station.detections || 22, [station]);
 
   if (isLoading && !data) {
     return (

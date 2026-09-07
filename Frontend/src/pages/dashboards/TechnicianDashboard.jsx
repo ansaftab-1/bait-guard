@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -15,6 +15,18 @@ import {
   CheckCircle2, Clock, ArrowRight, RefreshCw, Database,
   ChevronDown, FileText, Settings, ClipboardList, AlertCircle, X, Search, Check
 } from 'lucide-react';
+
+const FULL_HISTORY_LOGS = [
+  { id: '1', title: 'Bait Refilled', detail: 'BS-005 · Office Block Entry', time: '2:17 AM', date: 'Today', status: 'Completed', type: 'refill' },
+  { id: '2', title: 'Trap Inspected', detail: 'BS-003 · Loading Bay North', time: '9:45 AM', date: 'Today', status: 'Completed', type: 'inspection' },
+  { id: '3', title: 'Tamper Resolved', detail: 'BS-009 · Loading Bay South', time: 'Yesterday 4:30 PM', date: 'Yesterday', status: 'Completed', type: 'alert' },
+  { id: '4', title: 'Bait Refilled', detail: 'BS-012 · Cold Storage Wing', time: 'Yesterday 11:20 AM', date: 'Yesterday', status: 'Completed', type: 'refill' },
+  { id: '5', title: 'Trap Inspected', detail: 'BS-004 · Storage Facility C', time: '2 days ago 3:15 PM', date: '2 days ago', status: 'Completed', type: 'inspection' },
+  { id: '6', title: 'Sensor Cleaning', detail: 'BS-001 · Main Entrance A', time: '3 days ago 10:00 AM', date: '3 days ago', status: 'Completed', type: 'cleaning' },
+  { id: '7', title: 'Battery Replaced', detail: 'BS-015 · Cold Storage Room', time: '4 days ago 9:00 AM', date: '4 days ago', status: 'Completed', type: 'battery' },
+  { id: '8', title: 'Trap Inspected', detail: 'BS-019 · Silo Loading Dock', time: '5 days ago 2:30 PM', date: '5 days ago', status: 'Completed', type: 'inspection' },
+  { id: '9', title: 'Bait Refilled', detail: 'BS-022 · East Gate Perimeter', time: '1 week ago', date: '1 week ago', status: 'Completed', type: 'refill' },
+];
 
 export default function TechnicianDashboard() {
   const navigate = useNavigate();
@@ -55,54 +67,52 @@ export default function TechnicianDashboard() {
   const [activeStatusChangeId, setActiveStatusChangeId] = useState(null);
 
   // Stats derived from route assignments, synced to mock screenshot values
-  // We can track the additions dynamically
   const [completedTodayOffset, setCompletedTodayOffset] = useState(0);
 
-  const helperShowToast = (message, type = 'success') => {
+  const helperShowToast = useCallback((message, type = 'success') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3000);
-  };
+  }, []);
 
-  // Calculations for stats
+  // Calculations for stats (memoized)
   const totalAssignedCount = 18;
   
-  const pendingCount = routes.filter(r => r.status !== 'Completed').length; 
-  const completedCount = routes.filter(r => r.status === 'Completed').length;
+  const pendingCount = useMemo(() => routes.filter(r => r.status !== 'Completed').length, [routes]); 
+  const completedCount = useMemo(() => routes.filter(r => r.status === 'Completed').length, [routes]);
   
-  const completedToday = 2 + completedTodayOffset;
-  const servicedStations = 15 + completedTodayOffset;
+  const completedToday = useMemo(() => 2 + completedTodayOffset, [completedTodayOffset]);
+  const servicedStations = useMemo(() => 15 + completedTodayOffset, [completedTodayOffset]);
   
-  // Health score calculation
-  const healthScore = Math.min(100, 80 + Math.round((servicedStations / totalAssignedCount) * 20));
+  // Health score calculation (memoized)
+  const healthScore = useMemo(
+    () => Math.min(100, 80 + Math.round((servicedStations / totalAssignedCount) * 20)),
+    [servicedStations]
+  );
 
-  const handleStatusChange = (routeId, newStatus) => {
-    const prevRoute = routes.find(r => r.id === routeId);
-    if (!prevRoute) return;
+  const handleStatusChange = useCallback((routeId, newStatus) => {
+    setRoutes((prevRoutes) => {
+      const prevRoute = prevRoutes.find(r => r.id === routeId);
+      if (!prevRoute || prevRoute.status === newStatus) return prevRoutes;
 
-    if (prevRoute.status === newStatus) {
-      setActiveStatusChangeId(null);
-      return;
-    }
+      if (newStatus === 'Completed' && prevRoute.status !== 'Completed') {
+        setCompletedTodayOffset(prev => prev + 1);
+        helperShowToast(`Marked ${routeId} as Completed! Health score increased.`, 'success');
+      } else if (prevRoute.status === 'Completed' && newStatus !== 'Completed') {
+        setCompletedTodayOffset(prev => Math.max(-2, prev - 1));
+        helperShowToast(`Marked ${routeId} as ${newStatus}.`, 'info');
+      } else {
+        helperShowToast(`Updated ${routeId} to ${newStatus}.`, 'info');
+      }
 
-    // Adjust offsets if completing or uncompleting
-    if (newStatus === 'Completed' && prevRoute.status !== 'Completed') {
-      setCompletedTodayOffset(prev => prev + 1);
-      helperShowToast(`Marked ${routeId} as Completed! Health score increased.`, 'success');
-    } else if (prevRoute.status === 'Completed' && newStatus !== 'Completed') {
-      setCompletedTodayOffset(prev => Math.max(-2, prev - 1));
-      helperShowToast(`Marked ${routeId} as ${newStatus}.`, 'info');
-    } else {
-      helperShowToast(`Updated ${routeId} to ${newStatus}.`, 'info');
-    }
-
-    setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, status: newStatus } : r));
+      return prevRoutes.map(r => r.id === routeId ? { ...r, status: newStatus } : r);
+    });
     setActiveStatusChangeId(null);
-  };
+  }, [helperShowToast]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     helperShowToast('Refreshing dashboard telemetry...', 'info');
     setTimeout(() => {
@@ -110,48 +120,38 @@ export default function TechnicianDashboard() {
       setLastUpdatedText('Updated just now');
       helperShowToast('Dashboard data refreshed successfully!', 'success');
     }, 800);
-  };
+  }, [helperShowToast]);
 
-  const handleExportReports = () => {
+  const handleExportReports = useCallback(() => {
     helperShowToast('Compiling and generating reports PDF...', 'info');
     setTimeout(() => {
       helperShowToast('Report "Technician_ServiceLog_WarehouseA.pdf" downloaded successfully.', 'success');
     }, 1500);
-  };
+  }, [helperShowToast]);
 
-  // Filter routes based on filter selections
-  const filteredRoutes = routes.filter(r => {
-    if (activeFilter === 'All') return true;
-    if (activeFilter === 'Pending') return r.status === 'Pending';
-    if (activeFilter === 'In Progress') return r.status === 'In Progress';
-    if (activeFilter === 'Completed') return r.status === 'Completed';
-    if (activeFilter === 'High / Urgent') return r.priority === 'High' || r.priority === 'Urgent';
-    return true;
-  });
+  // Filter routes based on filter selections (memoized)
+  const filteredRoutes = useMemo(() => {
+    return routes.filter(r => {
+      if (activeFilter === 'All') return true;
+      if (activeFilter === 'Pending') return r.status === 'Pending';
+      if (activeFilter === 'In Progress') return r.status === 'In Progress';
+      if (activeFilter === 'Completed') return r.status === 'Completed';
+      if (activeFilter === 'High / Urgent') return r.priority === 'High' || r.priority === 'Urgent';
+      return true;
+    });
+  }, [routes, activeFilter]);
 
-  // Full history mock logs
-  const fullHistoryLogs = [
-    { id: '1', title: 'Bait Refilled', detail: 'BS-005 · Office Block Entry', time: '2:17 AM', date: 'Today', status: 'Completed', type: 'refill' },
-    { id: '2', title: 'Trap Inspected', detail: 'BS-003 · Loading Bay North', time: '9:45 AM', date: 'Today', status: 'Completed', type: 'inspection' },
-    { id: '3', title: 'Tamper Resolved', detail: 'BS-009 · Loading Bay South', time: 'Yesterday 4:30 PM', date: 'Yesterday', status: 'Completed', type: 'alert' },
-    { id: '4', title: 'Bait Refilled', detail: 'BS-012 · Cold Storage Wing', time: 'Yesterday 11:20 AM', date: 'Yesterday', status: 'Completed', type: 'refill' },
-    { id: '5', title: 'Trap Inspected', detail: 'BS-004 · Storage Facility C', time: '2 days ago 3:15 PM', date: '2 days ago', status: 'Completed', type: 'inspection' },
-    { id: '6', title: 'Sensor Cleaning', detail: 'BS-001 · Main Entrance A', time: '3 days ago 10:00 AM', date: '3 days ago', status: 'Completed', type: 'cleaning' },
-    { id: '7', title: 'Battery Replaced', detail: 'BS-015 · Cold Storage Room', time: '4 days ago 9:00 AM', date: '4 days ago', status: 'Completed', type: 'battery' },
-    { id: '8', title: 'Trap Inspected', detail: 'BS-019 · Silo Loading Dock', time: '5 days ago 2:30 PM', date: '5 days ago', status: 'Completed', type: 'inspection' },
-    { id: '9', title: 'Bait Refilled', detail: 'BS-022 · East Gate Perimeter', time: '1 week ago', date: '1 week ago', status: 'Completed', type: 'refill' },
-  ];
-
-  const filteredHistoryLogs = fullHistoryLogs.filter(log => {
-    const matchesSearch = log.title.toLowerCase().includes(historySearch.toLowerCase()) || 
-                          log.detail.toLowerCase().includes(historySearch.toLowerCase());
-    
-    if (historyFilter === 'All') return matchesSearch;
-    if (historyFilter === 'Refills') return matchesSearch && log.type === 'refill';
-    if (historyFilter === 'Inspections') return matchesSearch && log.type === 'inspection';
-    if (historyFilter === 'Alerts') return matchesSearch && log.type === 'alert';
-    return matchesSearch;
-  });
+  const filteredHistoryLogs = useMemo(() => {
+    return FULL_HISTORY_LOGS.filter(log => {
+      const matchesSearch = log.title.toLowerCase().includes(historySearch.toLowerCase()) || 
+                            log.detail.toLowerCase().includes(historySearch.toLowerCase());
+      
+      if (historyFilter === 'All') return matchesSearch;
+      if (historyFilter === 'Refills') return matchesSearch && log.type === 'refill';
+      if (historyFilter === 'Inspections') return matchesSearch && log.type === 'inspection';
+      if (historyFilter === 'Alerts') return matchesSearch && log.type === 'alert';
+    });
+  }, [historySearch, historyFilter]);
 
   if (isLoading) return <div style={{ padding: '24px' }}><OverviewSkeleton /></div>;
   if (error) return <div style={{ padding: '24px' }}><ErrorState onRetry={refresh} /></div>;
