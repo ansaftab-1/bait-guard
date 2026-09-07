@@ -55,232 +55,117 @@ export default function App() {
               <Route path="/submission-confirmed" element={<SubmissionConfirmedPage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-              {/* ─── Role-Based Dashboard Routes ─── */}
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AdminDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/admin/users"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AdminUsersPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/system"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AdminSystemPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/system/add-site"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AddSitePage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/system/add-user"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AddUserPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-
-
+              {/* ─── Role-Based Dashboard Redirects ─── */}
               <Route path="/dashboard" element={<Navigate to="/dashboard/viewer" replace />} />
-
-              <Route
-                path="/dashboard/admin"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
-                      <AdminDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/viewer"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.TECHNICIAN, ROLES.VIEWER]}>
-                    <DashboardLayout>
-                      <ViewerDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/technician"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.TECHNICIAN]}>
-                    <DashboardLayout>
-                      <TechnicianDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
               <Route path="/viewer/dashboard" element={<Navigate to="/dashboard/viewer" replace />} />
               <Route path="/technician/dashboard" element={<Navigate to="/dashboard/technician" replace />} />
-              <Route
-                path="/dashboard/operator"
-                element={<Navigate to="/admin/dashboard" replace />}
-              />
+              <Route path="/dashboard/operator" element={<Navigate to="/admin/dashboard" replace />} />
 
-
+              {/* ─── Persistent Authenticated Dashboard Layout Shell ─── */}
               <Route
-                path="/facility-map"
                 element={
                   <ProtectedRoute>
-                    <DashboardLayout>
-                      <FacilityMapPage />
-                    </DashboardLayout>
+                    <DashboardLayout />
                   </ProtectedRoute>
                 }
-              />
-              <Route
-                path="/stations"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <StationsPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/stations/add"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
+              >
+                {/* Admin-Only Management Routes */}
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/users"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AdminUsersPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/system"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AdminSystemPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/system/add-site"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AddSitePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/system/add-user"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AddUserPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard/viewer"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.TECHNICIAN, ROLES.VIEWER]}>
+                      <ViewerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard/technician"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.TECHNICIAN]}>
+                      <TechnicianDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Shared Telemetry & Facility Routes */}
+                <Route path="/facility-map" element={<FacilityMapPage />} />
+                <Route path="/stations" element={<StationsPage />} />
+                <Route
+                  path="/stations/add"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
                       <AddStationPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/stations/:stationId"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <StationDetailPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/stations/:stationId/edit"
-                element={
-                  <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                    <DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/stations/:stationId" element={<StationDetailPage />} />
+                <Route
+                  path="/stations/:stationId/edit"
+                  element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
                       <EditStationPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/alerts"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <AlertsPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/alerts/:alertId"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <AlertDetailPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <ReportsPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <SettingsPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings/edit-profile"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <EditProfilePage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings/edit-profile/:userId"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <EditProfilePage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/settings/contact-admin"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <ContactAdminPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings/change-password"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <ChangePasswordPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route path="/alerts" element={<AlertsPage />} />
+                <Route path="/alerts/:alertId" element={<AlertDetailPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/edit-profile" element={<EditProfilePage />} />
+                <Route path="/settings/edit-profile/:userId" element={<EditProfilePage />} />
+                <Route path="/settings/contact-admin" element={<ContactAdminPage />} />
+                <Route path="/settings/change-password" element={<ChangePasswordPage />} />
+              </Route>
 
               {/* Catch-all fallback */}
               <Route path="*" element={<Navigate to="/login" replace />} />
