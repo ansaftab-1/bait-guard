@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import * as notificationService from '../services/notificationService';
 
 const NotificationContext = createContext(null);
@@ -27,7 +27,10 @@ export function NotificationProvider({ children }) {
     };
   }, []);
 
-  const unreadCount = pushEnabled ? notifications.filter((n) => !n.read).length : 0;
+  const unreadCount = useMemo(
+    () => (pushEnabled ? notifications.filter((n) => !n.read).length : 0),
+    [pushEnabled, notifications]
+  );
 
   const setPushEnabled = useCallback((enabled) => {
     notificationService.setPushEnabled(enabled);
@@ -69,22 +72,37 @@ export function NotificationProvider({ children }) {
     setNotifications(updated);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      notifications,
+      pushEnabled,
+      unreadCount,
+      setPushEnabled,
+      markAsRead,
+      markAllAsRead,
+      clearAll,
+      deleteNotification,
+      approveRequest,
+      rejectRequest,
+      addNotification,
+    }),
+    [
+      notifications,
+      pushEnabled,
+      unreadCount,
+      setPushEnabled,
+      markAsRead,
+      markAllAsRead,
+      clearAll,
+      deleteNotification,
+      approveRequest,
+      rejectRequest,
+      addNotification,
+    ]
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        pushEnabled,
-        unreadCount,
-        setPushEnabled,
-        markAsRead,
-        markAllAsRead,
-        clearAll,
-        deleteNotification,
-        approveRequest,
-        rejectRequest,
-        addNotification,
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

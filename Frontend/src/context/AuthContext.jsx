@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -162,20 +162,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      user,
+      loading,
+      isAuthenticated,
+      login,
+      signup,
+      logout,
+      hasPermission,
+      getDashboardPath,
+      refreshUser,
+    }),
+    [user, loading, isAuthenticated, login, signup, logout, hasPermission, getDashboardPath, refreshUser]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        isAuthenticated,
-        login,
-        signup,
-        logout,
-        hasPermission,
-        getDashboardPath,
-        refreshUser,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
