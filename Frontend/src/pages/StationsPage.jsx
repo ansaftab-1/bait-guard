@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search,
@@ -19,6 +19,23 @@ import { canAddStation } from '../utils/permissions'
 import { getAvailableSitesList } from '../api/stationsData'
 import { SEEDED_FACILITY_MAP } from '../firebase/config'
 
+const getStatusPill = (status) => {
+  const s = (status || '').toLowerCase()
+  if (s === 'alert' || s === 'critical') {
+    return { bg: '#fef2f2', color: '#ef4444', label: '• Alert' }
+  }
+  if (s === 'low_bait' || s.includes('bait')) {
+    return { bg: '#fef3c7', color: '#d97706', label: '• Low Bait' }
+  }
+  if (s === 'low_battery' || s.includes('battery')) {
+    return { bg: '#fef3c7', color: '#d97706', label: '• Low Battery' }
+  }
+  if (s === 'offline' || s === 'inactive') {
+    return { bg: '#f1f5f9', color: '#64748b', label: '• Offline' }
+  }
+  return { bg: '#e7f9ef', color: '#0e7845', label: '• Online' }
+}
+
 export default function StationsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -27,8 +44,8 @@ export default function StationsPage() {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false)
   const { data, isLoading, error, refresh } = useStationsData()
 
-  const availableSites = getAvailableSitesList()
-  const stations = data?.stations || []
+  const availableSites = useMemo(() => getAvailableSitesList(), [])
+  const stations = useMemo(() => data?.stations || [], [data?.stations])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeChip, setActiveChip] = useState('all')
@@ -52,63 +69,52 @@ export default function StationsPage() {
     }
   }, [searchParams])
 
-
   // Selected station for the Featured card in the right column
   const [selectedStationId, setSelectedStationId] = useState('RB-07')
 
-  // Filter stations based on search, warehouse, active chip filter & Section 7 facility isolation
-  const filteredStations = stations.filter((s) => {
-    // Section 7: Facility Isolation Rule (technician/viewer only see their assigned facilities)
-    if (user?.facilityIds && user.facilityIds.length > 0 && user.role !== 'admin') {
-      const allowedNames = user.facilityIds.map((id) => (SEEDED_FACILITY_MAP[id] || id).toLowerCase());
-      const stationSite = (s.warehouse || s.facility || s.building || s.location || '').toLowerCase();
-      const isPermitted = allowedNames.some((name) =>
-        stationSite.includes(name) || name.includes(stationSite)
-      );
-      if (!isPermitted) return false;
-    }
+  // Filter stations based on search, warehouse, active chip filter & Section 7 facility isolation (memoized)
+  const filteredStations = useMemo(() => {
+    return stations.filter((s) => {
+      // Section 7: Facility Isolation Rule (technician/viewer only see their assigned facilities)
+      if (user?.facilityIds && user.facilityIds.length > 0 && user.role !== 'admin') {
+        const allowedNames = user.facilityIds.map((id) => (SEEDED_FACILITY_MAP[id] || id).toLowerCase());
+        const stationSite = (s.warehouse || s.facility || s.building || s.location || '').toLowerCase();
+        const isPermitted = allowedNames.some((name) =>
+          stationSite.includes(name) || name.includes(stationSite)
+        );
+        if (!isPermitted) return false;
+      }
 
-    const q = searchQuery.toLowerCase().trim()
-    const code = (s.code || s.id || '').toLowerCase()
-    const loc = (s.location || '').toLowerCase()
-    const status = (s.status || '').toLowerCase()
-    const baitVal = typeof s.bait === 'number' ? s.bait : s.baitPercent || 0
+      const q = searchQuery.toLowerCase().trim()
+      const code = (s.code || s.id || '').toLowerCase()
+      const loc = (s.location || '').toLowerCase()
+      const status = (s.status || '').toLowerCase()
+      const baitVal = typeof s.bait === 'number' ? s.bait : s.baitPercent || 0
 
-    if (q && !code.includes(q) && !loc.includes(q)) return false
+      if (q && !code.includes(q) && !loc.includes(q)) return false
 
-    if (selectedWarehouse !== 'All Warehouses') {
-      const wh = (s.warehouse || s.facility || s.building || '').toLowerCase()
-      if (wh !== selectedWarehouse.toLowerCase()) return false
-    }
+      if (selectedWarehouse !== 'All Warehouses') {
+        const wh = (s.warehouse || s.facility || s.building || '').toLowerCase()
+        if (wh !== selectedWarehouse.toLowerCase()) return false
+      }
 
-    if (activeChip === 'alerts' && status !== 'alert' && status !== 'critical') return false
-    if (activeChip === 'low_bait' && baitVal >= 25 && status !== 'low_bait') return false
-    if (activeChip === 'online' && status !== 'online' && status !== 'active') return false
+      if (activeChip === 'alerts' && status !== 'alert' && status !== 'critical') return false
+      if (activeChip === 'low_bait' && baitVal >= 25 && status !== 'low_bait') return false
+      if (activeChip === 'online' && status !== 'online' && status !== 'active') return false
 
-    return true
-  })
+      return true
+    })
+  }, [stations, user?.facilityIds, user?.role, searchQuery, selectedWarehouse, activeChip])
 
-  // Selected station for the Featured card in the right column
-  const selectedStation =
-    filteredStations.find((s) => s.id === selectedStationId || s.code === selectedStationId) || filteredStations[0] || stations[0]
-
-
-  const getStatusPill = (status) => {
-    const s = (status || '').toLowerCase()
-    if (s === 'alert' || s === 'critical') {
-      return { bg: '#fef2f2', color: '#ef4444', label: '• Alert' }
-    }
-    if (s === 'low_bait' || s.includes('bait')) {
-      return { bg: '#fef3c7', color: '#d97706', label: '• Low Bait' }
-    }
-    if (s === 'low_battery' || s.includes('battery')) {
-      return { bg: '#fef3c7', color: '#d97706', label: '• Low Battery' }
-    }
-    if (s === 'offline' || s === 'inactive') {
-      return { bg: '#f1f5f9', color: '#64748b', label: '• Offline' }
-    }
-    return { bg: '#e7f9ef', color: '#0e7845', label: '• Online' }
-  }
+  // Selected station for the Featured card in the right column (memoized)
+  const selectedStation = useMemo(() => {
+    return (
+      filteredStations.find((s) => s.id === selectedStationId || s.code === selectedStationId) ||
+      filteredStations[0] ||
+      stations[0] ||
+      null
+    )
+  }, [filteredStations, selectedStationId, stations])
 
   if (isLoading && !data) {
     return (
@@ -128,10 +134,10 @@ export default function StationsPage() {
     )
   }
 
-  const featStatus = getStatusPill(selectedStation.status)
-  const featBait = typeof selectedStation.bait === 'number' ? selectedStation.bait : selectedStation.baitPercent || 18
-  const featBatt = typeof selectedStation.battery === 'number' ? selectedStation.battery : selectedStation.batteryPercent || 82
-  const featDetects = selectedStation.detects || selectedStation.detections || 22
+  const featStatus = selectedStation ? getStatusPill(selectedStation.status) : { bg: '#e7f9ef', color: '#0e7845', label: '• Online' }
+  const featBait = selectedStation ? (typeof selectedStation.bait === 'number' ? selectedStation.bait : selectedStation.baitPercent || 18) : 18
+  const featBatt = selectedStation ? (typeof selectedStation.battery === 'number' ? selectedStation.battery : selectedStation.batteryPercent || 82) : 82
+  const featDetects = selectedStation ? (selectedStation.detects || selectedStation.detections || 22) : 22
 
   return (
     <div

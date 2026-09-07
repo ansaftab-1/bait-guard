@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -16,6 +16,56 @@ import NotificationDropdown from '../components/notifications/NotificationDropdo
 import StationDetailViewerModal from '../components/stations/StationDetailViewerModal';
 import ExportReportModal from '../components/reports/ExportReportModal';
 
+// Isolated AdminNotesCard to prevent whole-page re-renders on keystroke
+const AdminNotesCard = React.memo(function AdminNotesCard() {
+  const [noteText, setNoteText] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSaveNote = useCallback(() => {
+    if (!noteText.trim()) return;
+    setSavedNote(noteText);
+    setIsSaved(true);
+    const timer = setTimeout(() => setIsSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [noteText]);
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm flex flex-col gap-3">
+      <h2 className="text-base font-extrabold text-[#101828]">Admin Notes</h2>
+
+      <textarea
+        rows={4}
+        value={noteText}
+        onChange={(e) => setNoteText(e.target.value)}
+        placeholder="Add investigation notes..."
+        className="w-full p-3 rounded-xl border border-[#e2e8f0] text-xs font-medium text-[#101828] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] transition-all bg-[#f8fafc] resize-none"
+      />
+
+      {savedNote && (
+        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
+          <span className="font-bold block mb-0.5 text-slate-900">Saved Note:</span>
+          {savedNote}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-[11px] text-[#94a3b8] font-medium">
+          {isSaved ? '✓ Note saved' : 'Auto-saved draft'}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleSaveNote}
+          className="px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
+        >
+          Save Note
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function AlertDetailPage() {
   const { alertId } = useParams();
   const navigate = useNavigate();
@@ -26,12 +76,9 @@ export default function AlertDetailPage() {
   const [isStationModalOpen, setIsStationModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [alertStatus, setAlertStatus] = useState('Open');
-  const [noteText, setNoteText] = useState('');
-  const [savedNote, setSavedNote] = useState('');
-  const [isSaved, setIsSaved] = useState(false);
 
-  // Mock Alert details matching screenshot
-  const alertData = {
+  // Mock Alert details matching spec, memoized against status and user changes
+  const alertData = useMemo(() => ({
     id: alertId || 'RB-07',
     species: 'Rat',
     confidence: '97%',
@@ -67,9 +114,9 @@ export default function AlertDetailPage() {
       resolutionTime: alertStatus === 'Resolved' ? 'Just now' : '—',
       lastUpdated: '2:15 AM - Jun 24, 2026',
     },
-  };
+  }), [alertId, alertStatus, user?.name, user?.displayName]);
 
-  const stationForModal = {
+  const stationForModal = useMemo(() => ({
     id: alertData.stationId,
     code: alertData.stationId,
     location: `${alertData.facility} · ${alertData.zone}`,
@@ -79,14 +126,8 @@ export default function AlertDetailPage() {
     battery: alertData.health.battery,
     detects: 24,
     statusLabel: alertData.stationStatus,
-  };
+  }), [alertData]);
 
-  const handleSaveNote = () => {
-    if (!noteText.trim()) return;
-    setSavedNote(noteText);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
-  };
 
   return (
     <div className="p-6 md:p-8 bg-[#f4f6f9] min-h-screen font-sans">
@@ -401,39 +442,8 @@ export default function AlertDetailPage() {
             </span>
           </div>
 
-          {/* 3. Admin Notes Card */}
-          <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm flex flex-col gap-3">
-            <h2 className="text-base font-extrabold text-[#101828]">Admin Notes</h2>
-
-            <textarea
-              rows={4}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="Add investigation notes..."
-              className="w-full p-3 rounded-xl border border-[#e2e8f0] text-xs font-medium text-[#101828] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] transition-all bg-[#f8fafc] resize-none"
-            />
-
-            {savedNote && (
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
-                <span className="font-bold block mb-0.5 text-slate-900">Saved Note:</span>
-                {savedNote}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-[#94a3b8] font-medium">
-                {isSaved ? '✓ Note saved' : 'Auto-saved draft'}
-              </span>
-
-              <button
-                type="button"
-                onClick={handleSaveNote}
-                className="px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
-              >
-                Save Note
-              </button>
-            </div>
-          </div>
+          {/* 3. Admin Notes Card (Isolated state prevents whole page re-renders) */}
+          <AdminNotesCard />
 
           {/* 4. Audit Trail Card */}
           <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm flex flex-col gap-4">

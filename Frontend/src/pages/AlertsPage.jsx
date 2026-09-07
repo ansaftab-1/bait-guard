@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertsPageHeader from '../components/alerts/AlertsPageHeader';
 import PriorityBanner from '../components/alerts/PriorityBanner';
@@ -14,6 +14,27 @@ export default function AlertsPage() {
   const navigate = useNavigate();
   const { data, isLoading, error, refresh } = useAlertsData();
   const [activeFilter, setActiveFilter] = useState('all');
+
+  // Filter alert items in groups based on active chip filter (memoized)
+  const filteredGroups = useMemo(() => {
+    if (!data?.groups) return [];
+    return data.groups
+      .map((group) => {
+        if (activeFilter === 'all') return group;
+        const filteredItems = group.items.filter((item) => item.type === activeFilter);
+        return { ...group, items: filteredItems };
+      })
+      .filter((group) => group.items.length > 0);
+  }, [data?.groups, activeFilter]);
+
+  const handleAlertSelect = useCallback((alertItem) => {
+    const alertId = alertItem.id || 'alt-1';
+    navigate(`/alerts/${alertId}`);
+  }, [navigate]);
+
+  const handleBannerClick = useCallback(() => {
+    navigate('/stations');
+  }, [navigate]);
 
   if (isLoading || !data) {
     return (
@@ -36,24 +57,6 @@ export default function AlertsPage() {
       </div>
     );
   }
-
-  // Filter alert items in groups based on active chip filter
-  const filteredGroups = data.groups
-    .map((group) => {
-      if (activeFilter === 'all') return group;
-      const filteredItems = group.items.filter((item) => item.type === activeFilter);
-      return { ...group, items: filteredItems };
-    })
-    .filter((group) => group.items.length > 0);
-
-  const handleAlertSelect = (alertItem) => {
-    const alertId = alertItem.id || 'alt-1';
-    navigate(`/alerts/${alertId}`);
-  };
-
-  const handleBannerClick = () => {
-    navigate('/stations');
-  };
 
   return (
     <div className="p-6 flex flex-col min-h-full w-full box-border font-sans bg-[#f8fafc]">
