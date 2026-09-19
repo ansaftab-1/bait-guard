@@ -18,6 +18,7 @@ import { roleRequestsRouter } from './routes/roleRequestsRouter.js';
 import { auditLogsRouter } from './routes/auditLogsRouter.js';
 import { authRouter } from './routes/authRouter.js';
 import { adminNotificationRouter } from './routes/adminNotificationRouter.js';
+import { leadsRouter } from './routes/leadsRouter.js';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use('/api/role-requests', roleRequestsRouter);
 app.use('/api/audit-logs', auditLogsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminNotificationRouter);
+app.use('/api/leads', leadsRouter);
 
 // 404 Handler for unmatched routes
 app.use((req, res) => {
