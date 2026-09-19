@@ -87,3 +87,69 @@ npm run dev
 | **System Administrator** | `admin@baitguard.com` | `admin123` | All Facilities (`site_1`–`site_5`) |
 | **Field Technician** | `technician@baitguard.com` | `tech123` | Warehouse A, Warehouse B (`site_1`, `site_2`) |
 | **Read-Only Viewer** | `user@baitguard.com` | `user123` | Warehouse A (`site_1`) |
+
+---
+
+## Lead Intelligence & Prioritization
+
+### Problem
+
+Sales teams may have large numbers of leads but limited time to investigate each one. Not every lead deserves the same level of attention.
+
+### Solution
+
+The Lead Intelligence page cleans, scores, prioritizes, and analyzes leads so users can focus on higher-value opportunities.
+
+### Workflow
+
+```text
+COLLECT → CLEAN → VALIDATE → DEDUPLICATE → SCORE → ANALYZE → PRIORITIZE → EXPORT
+```
+
+### Key Features
+
+- **Lead Scoring (0–100)**: Automated multi-factor scoring (industry fit, revenue, location, company size, contact completeness, website quality, data freshness)
+- **Priority Classification**: `HIGH` (80–100), `MEDIUM` (60–79), `LOW` (0–59)
+- **Data Quality Checks**: Per-field checklist with overall quality percentage
+- **Duplicate Detection**: Domain, email, and name normalization to flag potential duplicates
+- **Search & Filtering**: Combinable filters by priority, industry, location, score range, and data quality
+- **AI Lead Analysis**: On-demand OpenAI analysis with structured business insights (simulated if no API key)
+- **CSV Import**: Upload and auto-score leads from a CSV file
+- **CSV Export**: Export the current filtered lead list with all fields
+
+### Access
+
+The Lead Intelligence page (`/lead-intelligence`) is accessible to **Admin** role users only.
+
+### Architecture
+
+```text
+Frontend (React + Vite)
+    ↓ useLeadsData hook
+    ↓ leadsData.js API module
+    ↓ apiClient (JWT Bearer token)
+Backend (Express.js)
+    ↓ leadsRouter.js (/api/leads)
+    ↓ leadScoring.js (scoring engine)
+    ↓ DataStore (in-memory, singleton)
+    ↓ OpenAI API (optional, via OPENAI_API_KEY in Backend/.env)
+```
+
+### Technologies
+
+- **Frontend**: React 19, Vite, TailwindCSS v4, lucide-react
+- **Backend**: Express.js, in-memory DataStore
+- **Auth**: Firebase Auth (frontend) + JWT middleware (backend)
+- **AI**: OpenAI GPT-4o-mini (optional; graceful simulation fallback if key is absent)
+- **Export**: Client-side CSV generation via Blob API
+
+### AI Setup (Optional)
+
+To enable real AI analysis, add your OpenAI key to `Backend/.env`:
+
+```env
+OPENAI_API_KEY=sk-...
+```
+
+Without this key, the "Analyze with AI" button returns a structured simulation based on the actual lead data — no fake facts are invented.
+
