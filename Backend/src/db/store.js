@@ -6,8 +6,6 @@ import {
   INITIAL_USERS,
   SEEDED_FACILITIES,
 } from '../data/seedData.js';
-import { INITIAL_LEADS } from '../data/leadsData.js';
-import { scoreLead, generateInsights, detectDuplicates } from '../services/leadScoring.js';
 
 class DataStore {
   constructor() {
@@ -22,23 +20,6 @@ class DataStore {
     this.auditLogs = [];
     this.adminNotifications = [];
     this.listeners = new Set();
-
-    // Leads — scored and deduplicated on startup
-    const rawLeads = JSON.parse(JSON.stringify(INITIAL_LEADS));
-    const dedupedLeads = detectDuplicates(rawLeads);
-    this.leads = dedupedLeads.map((lead) => {
-      const { total, breakdown, priority, dataQuality } = scoreLead(lead);
-      const { strengths, weaknesses } = generateInsights(lead, breakdown);
-      return {
-        ...lead,
-        leadScore: total,
-        priority,
-        scoreBreakdown: breakdown,
-        dataQuality,
-        insights: { strengths, weaknesses },
-        aiAnalysis: null,
-      };
-    });
   }
 
   onDataChange(callback) {
@@ -751,133 +732,7 @@ class DataStore {
     if (notif) notif.read = true;
     return notif;
   }
-
-  // ─── Leads ────────────────────────────────────────────────────────────────
-
-  /**
-   * List leads with optional filtering.
-   * @param {object} filters - { priority, industry, location, dataQuality, search, isDuplicate, minScore, maxScore }
-   */
-  getLeads(filters = {}) {
-    let list = [...this.leads];
-
-    if (filters.priority && filters.priority !== 'all') {
-      list = list.filter((l) => l.priority === filters.priority);
-    }
-    if (filters.industry && filters.industry !== 'all') {
-      list = list.filter((l) => l.industry === filters.industry);
-    }
-    if (filters.location && filters.location !== 'all') {
-      list = list.filter((l) => l.location === filters.location);
-    }
-    if (filters.dataQuality && filters.dataQuality !== 'all') {
-      list = list.filter((l) => l.dataQuality?.status === filters.dataQuality);
-    }
-    if (filters.isDuplicate === 'true' || filters.isDuplicate === true) {
-      list = list.filter((l) => l.isDuplicate);
-    }
-    if (filters.minScore !== undefined) {
-      list = list.filter((l) => l.leadScore >= Number(filters.minScore));
-    }
-    if (filters.maxScore !== undefined) {
-      list = list.filter((l) => l.leadScore <= Number(filters.maxScore));
-    }
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      list = list.filter(
-        (l) =>
-          (l.companyName || '').toLowerCase().includes(q) ||
-          (l.contactName || '').toLowerCase().includes(q) ||
-          (l.email || '').toLowerCase().includes(q) ||
-          (l.website || '').toLowerCase().includes(q) ||
-          (l.industry || '').toLowerCase().includes(q) ||
-          (l.location || '').toLowerCase().includes(q)
-      );
-    }
-
-    // Sort by score descending
-    list.sort((a, b) => b.leadScore - a.leadScore);
-
-    const all = this.leads;
-    const kpis = {
-      total: all.length,
-      highPriority: all.filter((l) => l.priority === 'high').length,
-      averageScore: all.length > 0 ? Math.round(all.reduce((s, l) => s + l.leadScore, 0) / all.length) : 0,
-      dataIssues: all.filter((l) => l.dataQuality?.status !== 'good').length,
-      duplicates: all.filter((l) => l.isDuplicate).length,
-    };
-
-    // Dynamic filter options
-    const industries = [...new Set(all.map((l) => l.industry).filter(Boolean))].sort();
-    const locations  = [...new Set(all.map((l) => l.location).filter(Boolean))].sort();
-
-    return { leads: list, kpis, industries, locations, totalFiltered: list.length };
-  }
-
-  getLeadById(id) {
-    return this.leads.find((l) => l.id === id) || null;
-  }
-
-  /**
-   * Import an array of raw leads. Scores, deduplicates, and stores them.
-   * Returns import summary.
-   */
-  importLeads(rawLeads) {
-    const deduped = detectDuplicates([...rawLeads, ...this.leads]);
-    const newDeduped = deduped.slice(0, rawLeads.length); // only the newly imported ones
-
-    const scored = newDeduped.map((lead) => {
-      const id = lead.id || `lead-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const revenueRaw = lead.revenueRaw || parseRevenue(lead.revenue || lead.revenueLabel);
-      const enriched = { ...lead, id, revenueRaw };
-      const { total, breakdown, priority, dataQuality } = scoreLead(enriched);
-      const { strengths, weaknesses } = generateInsights(enriched, breakdown);
-      return {
-        ...enriched,
-        leadScore: total,
-        priority,
-        scoreBreakdown: breakdown,
-        dataQuality,
-        insights: { strengths, weaknesses },
-        aiAnalysis: null,
-      };
-    });
-
-    // Merge (prepend)
-    this.leads = [...scored, ...this.leads];
-
-    const summary = {
-      imported: scored.length,
-      duplicatesDetected: scored.filter((l) => l.isDuplicate).length,
-      invalidEmails: scored.filter((l) => l.email && !isValidEmail(l.email)).length,
-      incompleteRecords: scored.filter((l) => l.dataQuality?.status === 'poor').length,
-      highPriority: scored.filter((l) => l.priority === 'high').length,
-    };
-    return summary;
-  }
-
-  /**
-   * Store AI analysis result on a lead.
-   */
-  setLeadAiAnalysis(id, analysis) {
-    const lead = this.leads.find((l) => l.id === id);
-    if (!lead) return null;
-    lead.aiAnalysis = analysis;
-    lead.aiAnalyzedAt = new Date().toISOString();
-    return lead;
-  }
-}
-
-/** Parse a revenue string like "$5M-$10M" into a rough midpoint number */
-function parseRevenue(str) {
-  if (!str) return 0;
-  const m = str.match(/(\d+)/);
-  return m ? parseInt(m[1]) * 1_000_000 : 0;
-}
-
-/** Basic email validation */
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export const store = new DataStore();
+
