@@ -51,16 +51,3 @@
 .animate-smooth-popup {
   animation: smoothPopupFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
-/* Lead Intelligence — responsive 2-col detail grid */
-.lead-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .lead-detail-grid {
-    grid-template-columns: 1fr;
-  }
-}

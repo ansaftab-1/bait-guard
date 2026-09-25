@@ -33,8 +33,6 @@ const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'))
 const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'))
 const AddSitePage = lazy(() => import('./pages/admin/AddSitePage'))
 const AddUserPage = lazy(() => import('./pages/admin/AddUserPage'))
-const LeadIntelligencePage = lazy(() => import('./pages/LeadIntelligencePage'))
-const LeadDetailPage = lazy(() => import('./pages/LeadDetailPage'))
 
 export default function App() {
   return (
@@ -167,24 +165,6 @@ export default function App() {
                 <Route path="/settings/edit-profile/:userId" element={<EditProfilePage />} />
                 <Route path="/settings/contact-admin" element={<ContactAdminPage />} />
                 <Route path="/settings/change-password" element={<ChangePasswordPage />} />
-
-                {/* ─── Lead Intelligence ─── */}
-                <Route
-                  path="/lead-intelligence"
-                  element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                      <LeadIntelligencePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/lead-intelligence/:leadId"
-                  element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                      <LeadDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
               </Route>
 
               {/* Catch-all fallback */}

@@ -8,7 +8,6 @@ import {
   Plus,
   Menu,
   X,
-  Target,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../services/authService';
@@ -68,7 +67,6 @@ export default function DashboardLayout({ children }) {
       { id: 'stations', label: 'Stations', icon: Radio, path: '/stations' },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle, path: '/alerts' },
       { id: 'reports', label: 'Reports', icon: FileText, path: '/reports' },
-      { id: 'lead-intelligence', label: 'Lead Intelligence', icon: Target, path: '/lead-intelligence' },
     ],
     [dashboardPath]
   );
